@@ -6,11 +6,11 @@ import {
   Instagram,
   BarChart3,
   CalendarDays,
-  Users,
-  Newspaper,
   LayoutDashboard,
   Settings,
   Bell,
+  FileBarChart2,
+  Trophy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
@@ -44,14 +44,14 @@ const navItems = [
     icon: CalendarDays,
   },
   {
-    label: "Monitor de Concorrentes",
-    href: "/dashboard/competitors",
-    icon: Users,
+    label: "Relatório Semanal",
+    href: "/dashboard/weekly-report",
+    icon: FileBarChart2,
   },
   {
-    label: "Consolidador de Notícias",
-    href: "/dashboard/news",
-    icon: Newspaper,
+    label: "Melhores Posts",
+    href: "/dashboard/top-posts",
+    icon: Trophy,
   },
 ];
 

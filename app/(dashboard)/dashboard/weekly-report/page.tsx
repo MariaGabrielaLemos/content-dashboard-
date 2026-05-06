@@ -1,17 +1,16 @@
 import {
-  Instagram,
-  Image,
-  MessageCircle,
+  FileBarChart2,
   Heart,
-  Plus,
-  Clock,
-  Users,
+  MessageCircle,
+  Image,
   Film,
   LayoutGrid,
+  Users,
+  TrendingUp,
+  Clock,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { getProfile, getRecentMedia, IGMedia } from "@/lib/instagram";
 
 function formatCount(n: number): string {
@@ -31,23 +30,35 @@ function formatDate(iso: string): string {
 }
 
 function mediaIcon(type: IGMedia["media_type"]) {
-  if (type === "VIDEO") return <Film className="h-5 w-5 text-muted-foreground" />;
-  if (type === "CAROUSEL_ALBUM") return <LayoutGrid className="h-5 w-5 text-muted-foreground" />;
-  return <Image className="h-5 w-5 text-muted-foreground" />;
+  if (type === "VIDEO") return <Film className="h-4 w-4 text-muted-foreground" />;
+  if (type === "CAROUSEL_ALBUM") return <LayoutGrid className="h-4 w-4 text-muted-foreground" />;
+  return <Image className="h-4 w-4 text-muted-foreground" />;
 }
 
-export default async function InstagramPage() {
-  const [profile, media] = await Promise.all([getProfile(), getRecentMedia(10)]);
+export default async function WeeklyReportPage() {
+  const [profile, allMedia] = await Promise.all([
+    getProfile(),
+    getRecentMedia(50),
+  ]);
 
+  const now = new Date();
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+  const weekPosts = allMedia.filter(
+    (m) => new Date(m.timestamp) >= sevenDaysAgo
+  );
+
+  const totalLikes = weekPosts.reduce((s, m) => s + m.like_count, 0);
+  const totalComments = weekPosts.reduce((s, m) => s + m.comments_count, 0);
   const avgLikes =
-    media.length > 0
-      ? Math.round(media.reduce((s, m) => s + m.like_count, 0) / media.length)
-      : 0;
-
+    weekPosts.length > 0 ? Math.round(totalLikes / weekPosts.length) : 0;
   const avgComments =
-    media.length > 0
-      ? Math.round(media.reduce((s, m) => s + m.comments_count, 0) / media.length)
-      : 0;
+    weekPosts.length > 0 ? Math.round(totalComments / weekPosts.length) : 0;
+
+  const engagementRate =
+    profile && profile.followers_count > 0 && weekPosts.length > 0
+      ? (((totalLikes + totalComments) / weekPosts.length / profile.followers_count) * 100).toFixed(2)
+      : null;
 
   const stats = [
     {
@@ -56,43 +67,57 @@ export default async function InstagramPage() {
       icon: <Users className="h-4 w-4 text-muted-foreground" />,
     },
     {
-      label: "Posts",
-      value: profile ? formatCount(profile.media_count) : "—",
+      label: "Posts esta semana",
+      value: weekPosts.length > 0 ? String(weekPosts.length) : "0",
       icon: <Image className="h-4 w-4 text-muted-foreground" />,
     },
     {
+      label: "Curtidas (semana)",
+      value: weekPosts.length > 0 ? formatCount(totalLikes) : "—",
+      icon: <Heart className="h-4 w-4 text-muted-foreground" />,
+    },
+    {
+      label: "Comentários (semana)",
+      value: weekPosts.length > 0 ? formatCount(totalComments) : "—",
+      icon: <MessageCircle className="h-4 w-4 text-muted-foreground" />,
+    },
+    {
       label: "Média de Curtidas",
-      value: media.length > 0 ? formatCount(avgLikes) : "—",
+      value: weekPosts.length > 0 ? formatCount(avgLikes) : "—",
       icon: <Heart className="h-4 w-4 text-muted-foreground" />,
     },
     {
       label: "Média de Comentários",
-      value: media.length > 0 ? formatCount(avgComments) : "—",
+      value: weekPosts.length > 0 ? formatCount(avgComments) : "—",
       icon: <MessageCircle className="h-4 w-4 text-muted-foreground" />,
+    },
+    {
+      label: "Taxa de Engajamento",
+      value: engagementRate ? `${engagementRate}%` : "—",
+      icon: <TrendingUp className="h-4 w-4 text-muted-foreground" />,
+    },
+    {
+      label: "Total de Posts",
+      value: profile ? formatCount(profile.media_count) : "—",
+      icon: <Image className="h-4 w-4 text-muted-foreground" />,
     },
   ];
 
   return (
     <div className="space-y-8">
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <Instagram className="h-5 w-5 text-primary" />
-            <h1 className="text-2xl font-bold tracking-tight">Gerenciador Instagram</h1>
-          </div>
-          <p className="text-muted-foreground mt-1">
-            {profile
-              ? `@${profile.username} — dados atualizados agora`
-              : "Agende posts, gerencie seu feed e acompanhe o desempenho."}
-          </p>
+      <div>
+        <div className="flex items-center gap-2">
+          <FileBarChart2 className="h-5 w-5 text-primary" />
+          <h1 className="text-2xl font-bold tracking-tight">Relatório Semanal</h1>
         </div>
-        <Button className="gap-2">
-          <Plus className="h-4 w-4" />
-          Novo Post
-        </Button>
+        <p className="text-muted-foreground mt-1">
+          {profile
+            ? `@${profile.username} — últimos 7 dias`
+            : "Métricas consolidadas do perfil por semana."}
+        </p>
       </div>
 
-      {/* Estatísticas */}
+      {/* Métricas */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
           <Card key={stat.label}>
@@ -109,22 +134,21 @@ export default async function InstagramPage() {
         ))}
       </div>
 
-      {/* Posts */}
+      {/* Posts da semana */}
       <div>
-        <h2 className="text-lg font-semibold mb-4">Posts Recentes</h2>
+        <h2 className="text-lg font-semibold mb-4">Posts publicados esta semana</h2>
 
-        {media.length === 0 ? (
+        {weekPosts.length === 0 ? (
           <Card>
             <CardContent className="p-6 text-center text-muted-foreground text-sm">
-              Nenhum post encontrado. Verifique o token de acesso.
+              Nenhum post publicado nos últimos 7 dias.
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-3">
-            {media.map((post) => (
+            {weekPosts.map((post) => (
               <Card key={post.id}>
                 <CardContent className="p-4 flex items-center gap-4">
-                  {/* Miniatura */}
                   <div className="h-14 w-14 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
                     {post.media_url || post.thumbnail_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -137,7 +161,6 @@ export default async function InstagramPage() {
                       mediaIcon(post.media_type)
                     )}
                   </div>
-
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-foreground truncate">
                       {post.caption ?? "(sem legenda)"}
@@ -157,7 +180,6 @@ export default async function InstagramPage() {
                       </span>
                     </div>
                   </div>
-
                   <Badge variant="success">publicado</Badge>
                 </CardContent>
               </Card>

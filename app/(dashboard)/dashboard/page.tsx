@@ -2,10 +2,10 @@ import {
   Instagram,
   BarChart3,
   CalendarDays,
-  Users,
-  Newspaper,
   TrendingUp,
   ArrowUpRight,
+  FileBarChart2,
+  Trophy,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -44,23 +44,23 @@ const sections = [
     trend: "",
   },
   {
-    title: "Monitor de Concorrentes",
-    description: "Monitore a atividade dos concorrentes e compare seu desempenho.",
-    href: "/dashboard/competitors",
-    icon: Users,
-    badge: "5 monitorados",
-    badgeVariant: "outline" as const,
-    stat: "Atualizado há 1h",
+    title: "Relatório Semanal",
+    description: "Todas as métricas do perfil consolidadas por semana: alcance, engajamento, crescimento e mais.",
+    href: "/dashboard/weekly-report",
+    icon: FileBarChart2,
+    badge: "Novo",
+    badgeVariant: "success" as const,
+    stat: "Atualizado esta semana",
     trend: "",
   },
   {
-    title: "Consolidador de Notícias",
-    description: "Agregue e curadorie notícias do setor de múltiplas fontes.",
-    href: "/dashboard/news",
-    icon: Newspaper,
-    badge: "42 novas",
-    badgeVariant: "default" as const,
-    stat: "8 fontes",
+    title: "Melhores Posts",
+    description: "Os posts com melhor desempenho dos últimos 6 meses, ranqueados por curtidas, comentários e alcance.",
+    href: "/dashboard/top-posts",
+    icon: Trophy,
+    badge: "6 meses",
+    badgeVariant: "warning" as const,
+    stat: "Em desenvolvimento",
     trend: "",
   },
 ];
@@ -84,7 +84,6 @@ export default function DashboardPage() {
           { label: "Alcance Total", value: "48,2k", change: "+8,1%" },
           { label: "Taxa de Engajamento", value: "5,4%", change: "+0,6%" },
           { label: "Posts Esta Semana", value: "14", change: "+4" },
-          { label: "Concorrentes Monitorados", value: "5", change: "" },
         ].map((stat) => (
           <Card key={stat.label}>
             <CardContent className="p-5">
