@@ -29,4 +29,6 @@ next-env.d.ts
 *.pem
 .vercel
 
-.vercel
+# runtime data (feedback + goals stored locally — until DB)
+/data/
+
