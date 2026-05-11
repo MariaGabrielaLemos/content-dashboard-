@@ -3,20 +3,21 @@ import type { ReactNode } from "react";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
-  title: "Content Dashboard",
-  description: "Manage your content, analytics, and social media in one place",
+  title: "WBR Dashboard — Fernando Moulin",
+  description:
+    "Painel executivo de WBR (Weekly Business Review) — comparativos rolling, trimestres fixos, projetado vs realizado e aprovação de conteúdo.",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="pt-BR" className={`dark ${inter.variable}`}>
       <body className={inter.className}>{children}</body>
     </html>
   );

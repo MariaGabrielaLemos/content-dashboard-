@@ -2,43 +2,62 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Polaris® Dark Surface Palette — derivado de lib/brand-tokens (polaris-diagnostico).
+ *  Cosmo    #101518 → bg
+ *  Polar    #192433 → bg elevated / cards
+ *  Off-White#EFEFEF → text primário
+ *  Elétrico #F6551A → primary / accent (alto contraste em dark)
+ *  Brasa    #C73E0B → secondary / hover / negative-on-positive
+ *  Terra    #A23B16 → muted accent
+ */
 @layer base {
   :root {
-    --background: 224 71% 4%;
-    --foreground: 213 31% 91%;
+    --background: 204 17% 8%;        /* Cosmo  #101518 */
+    --foreground: 0 0% 94%;          /* Off-White #EFEFEF */
 
-    --card: 224 71% 6%;
-    --card-foreground: 213 31% 91%;
+    --card: 213 35% 15%;             /* Polar #192433 */
+    --card-foreground: 0 0% 94%;
 
-    --popover: 224 71% 6%;
-    --popover-foreground: 213 31% 91%;
+    --popover: 213 35% 12%;
+    --popover-foreground: 0 0% 94%;
 
-    --primary: 263 90% 68%;
+    --primary: 14 92% 53%;           /* Elétrico #F6551A */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 222 47% 11%;
-    --secondary-foreground: 213 31% 91%;
+    --secondary: 213 35% 18%;
+    --secondary-foreground: 0 0% 94%;
 
-    --muted: 223 47% 11%;
-    --muted-foreground: 215 16% 57%;
+    --muted: 213 35% 14%;
+    --muted-foreground: 213 12% 65%;
 
-    --accent: 263 90% 68%;
+    --accent: 14 92% 53%;            /* Elétrico */
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 63% 55%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 216 34% 17%;
-    --input: 216 34% 17%;
-    --ring: 263 90% 68%;
+    --success: 152 60% 50%;
+    --warning: 38 92% 56%;
+
+    --border: 213 28% 22%;
+    --input: 213 28% 22%;
+    --ring: 14 92% 53%;
 
     --radius: 0.75rem;
 
-    --sidebar: 224 71% 5%;
-    --sidebar-foreground: 213 31% 91%;
-    --sidebar-border: 216 34% 13%;
-    --sidebar-accent: 222 47% 11%;
-    --sidebar-accent-foreground: 213 31% 91%;
+    --sidebar: 204 22% 6%;
+    --sidebar-foreground: 0 0% 94%;
+    --sidebar-border: 213 28% 14%;
+    --sidebar-accent: 213 35% 12%;
+    --sidebar-accent-foreground: 0 0% 94%;
+
+    /* Charts */
+    --chart-1: 14 92% 53%;           /* Elétrico */
+    --chart-2: 24 88% 41%;           /* Brasa */
+    --chart-3: 18 76% 36%;           /* Terra */
+    --chart-4: 213 35% 60%;          /* Polar light */
+    --chart-5: 152 60% 50%;          /* success */
   }
 }
 
@@ -47,8 +66,13 @@
     @apply border-border;
   }
 
+  html {
+    font-feature-settings: "ss01", "cv11";
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
 
   ::-webkit-scrollbar {
@@ -66,5 +90,18 @@
 
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-muted-foreground;
+  }
+}
+
+@layer components {
+  .kpi-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  @media (min-width: 1024px) {
+    .kpi-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
   }
 }
