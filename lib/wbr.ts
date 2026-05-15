@@ -68,7 +68,10 @@ export function quarterPeriod(year: number, q: 1 | 2 | 3 | 4): Period {
 export interface MetricBag {
   posts: number;
   reach: number;
+  /** @deprecated Meta v22+ removeu — sempre 0. Use `views`. */
   impressions: number;
+  /** Views (Meta v22+): substituiu plays/impressions. Total de visualizações. */
+  views: number;
   likes: number;
   comments: number;
   saves: number;
@@ -85,6 +88,7 @@ export const emptyBag: MetricBag = {
   posts: 0,
   reach: 0,
   impressions: 0,
+  views: 0,
   likes: 0,
   comments: 0,
   saves: 0,
@@ -122,6 +126,7 @@ const HIGHER_IS_BETTER: (keyof MetricBag)[] = [
   "posts",
   "reach",
   "impressions",
+  "views",
   "likes",
   "comments",
   "saves",
@@ -146,6 +151,8 @@ export interface PostLike {
   shares?: number;
   reach?: number;
   impressions?: number;
+  views?: number;
+  plays?: number;
 }
 
 export function aggregatePosts(
@@ -163,6 +170,7 @@ export function aggregatePosts(
   const shares = inWindow.reduce((s, p) => s + (p.shares ?? 0), 0);
   const reach = inWindow.reduce((s, p) => s + (p.reach ?? 0), 0);
   const impressions = inWindow.reduce((s, p) => s + (p.impressions ?? 0), 0);
+  const views = inWindow.reduce((s, p) => s + (p.views ?? p.plays ?? 0), 0);
   const engagement = likes + comments + saves + shares;
 
   const engagementRate =
@@ -174,6 +182,7 @@ export function aggregatePosts(
     posts: inWindow.length,
     reach,
     impressions,
+    views,
     likes,
     comments,
     saves,
@@ -203,7 +212,7 @@ export const WBR_METRICS: {
 }[] = [
   { key: "followers", label: "Seguidores", format: "compact" },
   { key: "reach", label: "Alcance", format: "compact" },
-  { key: "impressions", label: "Impressões", format: "compact" },
+  { key: "views", label: "Views", format: "compact" },
   { key: "engagement", label: "Engajamento", format: "compact" },
   { key: "engagementRate", label: "Taxa de Engajamento", format: "pct" },
   { key: "likes", label: "Curtidas", format: "compact" },

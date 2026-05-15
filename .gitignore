@@ -32,3 +32,7 @@ next-env.d.ts
 # runtime data (feedback + goals stored locally — until DB)
 /data/
 
+# cache disco de API (Meta Graph etc.)
+/_cache/
+/_revisões/
+
