@@ -4,13 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Instagram,
-  BarChart3,
   CalendarDays,
   Activity,
   FileBarChart2,
   Trophy,
   Target,
   MessageSquare,
+  Film,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
@@ -34,11 +34,6 @@ const primaryNav = [
     href: "/dashboard/projection",
     icon: Target,
   },
-  {
-    label: "Feedback do Fernando",
-    href: "/dashboard/feedback",
-    icon: MessageSquare,
-  },
 ];
 
 const operacionalNav = [
@@ -46,6 +41,11 @@ const operacionalNav = [
     label: "Melhores posts (6m)",
     href: "/dashboard/top-posts",
     icon: Trophy,
+  },
+  {
+    label: "Reels",
+    href: "/dashboard/reels",
+    icon: Film,
   },
   {
     label: "Calendário do mês",
@@ -58,9 +58,9 @@ const operacionalNav = [
     icon: Instagram,
   },
   {
-    label: "Analytics",
-    href: "/dashboard/analytics",
-    icon: BarChart3,
+    label: "Feedback (issues)",
+    href: "/dashboard/feedback",
+    icon: MessageSquare,
   },
 ];
 
@@ -71,36 +71,36 @@ export function Sidebar() {
     <aside className="flex h-screen w-64 flex-col border-r border-sidebar-border bg-sidebar">
       {/* Brand */}
       <div className="flex h-20 items-center gap-3 border-b border-sidebar-border px-5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary via-orange-500 to-orange-700">
-          <span className="text-sm font-bold text-white">FM</span>
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary via-orange-500 to-orange-700 shadow-md shadow-primary/20">
+          <span className="text-sm font-bold tracking-wide text-white">FM</span>
         </div>
         <div className="flex min-w-0 flex-col">
-          <span className="truncate text-sm font-semibold leading-tight text-sidebar-foreground">
+          <span className="truncate text-[15px] font-semibold leading-tight text-sidebar-foreground">
             Fernando Moulin
           </span>
-          <span className="text-[11px] text-muted-foreground">
-            WBR Dashboard · Drop Studios
+          <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            WBR · Drop Studios
           </span>
         </div>
       </div>
 
       <ScrollArea className="flex-1 px-3 py-4">
         <NavSection label="Visão executiva" items={primaryNav} pathname={pathname} />
-        <div className="my-3 px-2">
+        <div className="my-4 px-2">
           <Separator />
         </div>
         <NavSection label="Operacional" items={operacionalNav} pathname={pathname} />
       </ScrollArea>
 
       {/* Footer */}
-      <div className="border-t border-sidebar-border px-3 py-4 space-y-2">
-        <div className="rounded-lg border border-border/50 bg-card/50 px-3 py-2.5">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <div className="border-t border-sidebar-border px-3 py-4">
+        <div className="rounded-lg border border-border/40 bg-card/40 px-3 py-2.5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             Substitui o
           </p>
-          <p className="text-xs font-medium text-foreground">MLABS</p>
-          <p className="mt-1 text-[10px] text-muted-foreground">
-            Comparativos rolling + trimestres fixos · feedback persistido
+          <p className="mt-0.5 text-sm font-semibold text-foreground">MLABS</p>
+          <p className="mt-1 text-[11px] leading-snug text-muted-foreground/85">
+            Rolling + trimestres · feedback persistido · puxa direto da Meta API
           </p>
         </div>
       </div>
@@ -119,10 +119,10 @@ function NavSection({
 }) {
   return (
     <div>
-      <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70">
+      <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/60">
         {label}
       </p>
-      <nav className="space-y-1">
+      <nav className="space-y-0.5">
         {items.map((item) => {
           const Icon = item.icon;
           const isActive =
@@ -134,16 +134,25 @@ function NavSection({
               key={item.href}
               href={item.href}
               className={cn(
-                "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                // touch target 44px (min-h-11 = 2.75rem = 44px)
+                "group relative flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-[14px] font-medium transition-all",
                 isActive
-                  ? "bg-primary/15 text-primary"
+                  ? "bg-primary/12 text-primary"
                   : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               )}
             >
+              {isActive && (
+                <span
+                  aria-hidden
+                  className="absolute inset-y-2 left-0 w-[3px] rounded-r bg-primary"
+                />
+              )}
               <Icon
                 className={cn(
-                  "h-4 w-4 shrink-0",
-                  isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+                  "h-[18px] w-[18px] shrink-0 transition-colors",
+                  isActive
+                    ? "text-primary"
+                    : "text-muted-foreground/80 group-hover:text-foreground"
                 )}
               />
               <span className="truncate">{item.label}</span>
@@ -151,9 +160,6 @@ function NavSection({
                 <span className="ml-auto rounded bg-primary/20 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary">
                   {item.badge}
                 </span>
-              )}
-              {isActive && !item.badge && (
-                <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary" />
               )}
             </Link>
           );
