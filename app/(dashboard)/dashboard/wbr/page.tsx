@@ -1,17 +1,17 @@
-import { FileBarChart2, Calendar, RefreshCw } from "lucide-react";
-import { format, subDays, eachDayOfInterval, isSameDay } from "date-fns";
+import { FileBarChart2, Calendar } from "lucide-react";
+import { format, subDays, eachDayOfInterval, isSameDay, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { SectionHeader } from "@/components/section-header";
 import { WbrComparisonTable } from "@/components/wbr-comparison-table";
 import { WeeklySummary } from "@/components/weekly-summary";
 import { EvolutionChart, type DailyMetric } from "@/components/evolution-chart";
-import { FeedbackButton } from "@/components/feedback-button";
 import { PeriodToggle } from "@/components/period-toggle";
 import { QuarterSelect } from "@/components/quarter-select";
+import { RefreshButton } from "@/components/refresh-button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
-import { getProfile, getMediaWithInsights } from "@/lib/instagram";
+import { getProfile, getMediaWithInsights, getLastFetchedAt } from "@/lib/instagram";
 import {
   rollingPeriod,
   quarterPeriod,
@@ -38,6 +38,10 @@ export default async function WbrPage({
 
   const followers = profile?.followers_count ?? 0;
   const now = new Date();
+  const fetchedAt = getLastFetchedAt();
+  const fetchedLabel = fetchedAt
+    ? `atualizado ${format(parseISO(fetchedAt), "dd/MM 'às' HH:mm", { locale: ptBR })}`
+    : `carregado em ${format(now, "dd/MM 'às' HH:mm", { locale: ptBR })}`;
 
   // ---------------- Comparativo principal ----------------
   let comparisonColumns: { period: Period; bag: BagWithPrev }[] = [];
@@ -100,18 +104,10 @@ export default async function WbrPage({
         title="WBR — Weekly Business Review"
         description={
           profile
-            ? `@${profile.username} · ${followers.toLocaleString("pt-BR")} seguidores · atualizado ${format(now, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`
+            ? `@${profile.username} · ${followers.toLocaleString("pt-BR")} seguidores · ${fetchedLabel}`
             : "Comparativos rolling 7/30/90 dias e estáticos por trimestre — substitui a leitura manual no MLABS."
         }
-        actions={
-          <>
-            <Badge variant="outline" className="gap-1.5 border-primary/40 text-primary">
-              <RefreshCw className="h-3 w-3" />
-              Dados Meta API
-            </Badge>
-            <FeedbackButton context="WBR — visão geral" />
-          </>
-        }
+        actions={<RefreshButton />}
       />
 
       {/* Toggle de modo */}
@@ -196,10 +192,6 @@ export default async function WbrPage({
         )}
       </section>
 
-      {/* Feedback ao final */}
-      <section className="border-t border-border/60 pt-6">
-        <FeedbackButton context={`WBR · ${mode === "rolling" ? "rolling" : selectedQuarter}`} />
-      </section>
     </div>
   );
 }

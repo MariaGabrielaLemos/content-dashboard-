@@ -9,20 +9,22 @@ import {
   Eye,
   Heart,
   Activity,
-  MessageSquare,
+  Bookmark,
+  Send,
+  PlayCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { format, eachDayOfInterval, subDays, isSameDay } from "date-fns";
+import { format, eachDayOfInterval, subDays, isSameDay, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { SectionHeader } from "@/components/section-header";
 import { KpiCard } from "@/components/kpi-card";
 import { EvolutionChart, type DailyMetric } from "@/components/evolution-chart";
+import { RefreshButton } from "@/components/refresh-button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
-import { getProfile, getMediaWithInsights } from "@/lib/instagram";
-import { listFeedback } from "@/lib/feedback-store";
+import { getProfile, getMediaWithInsights, getLastFetchedAt } from "@/lib/instagram";
 import {
   rollingPeriod,
   bagForPeriod,
@@ -31,14 +33,17 @@ import {
 } from "@/lib/wbr";
 
 export default async function OverviewPage() {
-  const [profile, media, recentFeedback] = await Promise.all([
+  const [profile, media] = await Promise.all([
     getProfile(),
     getMediaWithInsights(60),
-    listFeedback(),
   ]);
 
   const followers = profile?.followers_count ?? 0;
   const now = new Date();
+  const fetchedAt = getLastFetchedAt();
+  const fetchedLabel = fetchedAt
+    ? `Atualizado ${format(parseISO(fetchedAt), "dd/MM 'às' HH:mm", { locale: ptBR })}`
+    : `Carregado em ${format(now, "dd/MM 'às' HH:mm", { locale: ptBR })}`;
 
   const week = rollingPeriod(7, now);
   const month = rollingPeriod(30, now);
@@ -61,8 +66,6 @@ export default async function OverviewPage() {
     };
   });
 
-  const recentFb = recentFeedback.slice(0, 3);
-
   return (
     <div className="space-y-8">
       <SectionHeader
@@ -76,9 +79,12 @@ export default async function OverviewPage() {
           profile ? `${followers.toLocaleString("pt-BR")} seguidores hoje.` : "Conecte a Meta API para puxar dados reais."
         }`}
         actions={
-          <Badge variant="outline" className="gap-1.5 border-primary/40 text-primary">
-            {format(now, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="gap-1.5 border-primary/40 text-primary">
+              {fetchedLabel}
+            </Badge>
+            <RefreshButton />
+          </div>
         }
       />
 
@@ -90,11 +96,12 @@ export default async function OverviewPage() {
           description="Configure as credenciais em .env.local para puxar métricas reais. Os dados antigos do MLABS ficam fora — esta dashboard substitui aquele fluxo."
         />
       ) : (
+        <div className="space-y-4">
         <div className="kpi-grid">
           <KpiCard
             label="Seguidores"
             icon={Users}
-            value={formatMetric(followers, "compact")}
+            value={followers.toLocaleString("pt-BR")}
             hint="Total na conta hoje"
             accent
           />
@@ -103,21 +110,67 @@ export default async function OverviewPage() {
             icon={Eye}
             value={formatMetric(weekBag.current.reach, "compact")}
             delta={calcDelta(weekBag.current.reach, weekBag.previous.reach)}
-            hint="vs 7d anteriores"
+            compareValue={formatMetric(weekBag.previous.reach, "compact")}
           />
           <KpiCard
             label="Engajamento · 7d"
             icon={Heart}
             value={formatMetric(weekBag.current.engagement, "compact")}
             delta={calcDelta(weekBag.current.engagement, weekBag.previous.engagement)}
+            compareValue={formatMetric(weekBag.previous.engagement, "compact")}
           />
           <KpiCard
             label="Taxa de Engajamento · 7d"
             icon={Activity}
             value={formatMetric(weekBag.current.engagementRate, "pct")}
             delta={calcDelta(weekBag.current.engagementRate, weekBag.previous.engagementRate)}
+            compareValue={formatMetric(weekBag.previous.engagementRate, "pct")}
             hint={`${weekBag.current.posts} posts publicados`}
           />
+        </div>
+
+        {/* Eyebrow + linha 2 — sinais de qualidade + volume (tier signal) */}
+        <div className="space-y-3 pt-2">
+          <p className="eyebrow">Sinais estratégicos · 7d</p>
+          <div className="kpi-grid">
+            <KpiCard
+              tier="signal"
+              label="Views"
+              icon={PlayCircle}
+              value={formatMetric(weekBag.current.views, "compact")}
+              delta={calcDelta(weekBag.current.views, weekBag.previous.views)}
+              compareValue={formatMetric(weekBag.previous.views, "compact")}
+              hint="Topo de funil — visualizações totais"
+            />
+            <KpiCard
+              tier="signal"
+              label="Salvamentos"
+              icon={Bookmark}
+              value={formatMetric(weekBag.current.saves, "compact")}
+              delta={calcDelta(weekBag.current.saves, weekBag.previous.saves)}
+              compareValue={formatMetric(weekBag.previous.saves, "compact")}
+              hint="High intent — guardado pra rever"
+            />
+            <KpiCard
+              tier="signal"
+              label="Compartilhamentos"
+              icon={Send}
+              value={formatMetric(weekBag.current.shares, "compact")}
+              delta={calcDelta(weekBag.current.shares, weekBag.previous.shares)}
+              compareValue={formatMetric(weekBag.previous.shares, "compact")}
+              hint="Algoritmo prioriza — viralidade orgânica"
+            />
+            <KpiCard
+              tier="signal"
+              label="Posts publicados"
+              icon={FileBarChart2}
+              value={formatMetric(weekBag.current.posts, "int")}
+              delta={calcDelta(weekBag.current.posts, weekBag.previous.posts)}
+              compareValue={formatMetric(weekBag.previous.posts, "int")}
+              hint="Cadência editorial"
+            />
+          </div>
+        </div>
         </div>
       )}
 
@@ -200,45 +253,6 @@ export default async function OverviewPage() {
         </Card>
       </div>
 
-      {/* Últimos feedbacks */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            Últimos feedbacks do Fernando
-          </h2>
-          <Link
-            href="/dashboard/feedback"
-            className="text-xs text-primary hover:underline inline-flex items-center gap-1"
-          >
-            Ver todos <ArrowUpRight className="h-3 w-3" />
-          </Link>
-        </div>
-        {recentFb.length === 0 ? (
-          <EmptyState
-            icon={MessageSquare}
-            title="Nada registrado ainda"
-            description="Os feedbacks que o Fernando deixar nas páginas aparecem aqui."
-          />
-        ) : (
-          <div className="grid gap-3 md:grid-cols-3">
-            {recentFb.map((f) => (
-              <Card key={f.id}>
-                <CardContent className="p-4">
-                  <Badge variant="outline" className="mb-2 text-[10px]">
-                    {f.sentiment === "positive"
-                      ? "Aprovado"
-                      : f.sentiment === "negative"
-                      ? "Ajuste"
-                      : "Sugestão"}
-                  </Badge>
-                  <p className="text-xs text-muted-foreground mb-1">{f.context}</p>
-                  <p className="text-sm line-clamp-3">{f.message}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </section>
     </div>
   );
 }
