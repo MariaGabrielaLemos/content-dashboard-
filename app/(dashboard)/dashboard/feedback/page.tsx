@@ -5,6 +5,7 @@ import { SectionHeader } from "@/components/section-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
+import { FeedbackStatusSelect } from "@/components/feedback-status-select";
 import { listFeedback, type Feedback } from "@/lib/feedback-store";
 
 const SENTIMENT_META = {
@@ -32,8 +33,8 @@ export default async function FeedbackPage() {
     <div className="space-y-8">
       <SectionHeader
         icon={MessageSquare}
-        title="Log de feedback"
-        description="Cada aprovação, ajuste ou sugestão do Fernando vira insumo de aprendizado da Drop. Esta é a base de conhecimento que substitui o WhatsApp."
+        title="Backlog de feedback"
+        description="Fila de issues da própria dashboard. Cada feedback do Fernando vira um item rastreável — mude o status conforme implementação."
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -93,6 +94,9 @@ function FeedbackCard({ item }: { item: Feedback }) {
                 {format(parseISO(item.timestamp), "dd/MM/yyyy 'às' HH:mm", {
                   locale: ptBR,
                 })}
+              </span>
+              <span className="ml-auto">
+                <FeedbackStatusSelect id={item.id} status={item.status} />
               </span>
             </div>
             <p className="text-sm text-foreground/95 leading-relaxed whitespace-pre-wrap">

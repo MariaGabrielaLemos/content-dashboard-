@@ -5,7 +5,6 @@ import { SectionHeader } from "@/components/section-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ProjectionChart, type ProjectionPoint } from "@/components/projection-chart";
-import { FeedbackButton } from "@/components/feedback-button";
 import { EmptyState } from "@/components/empty-state";
 import { getProfile, getRecentMedia } from "@/lib/instagram";
 import { listGoals } from "@/lib/projection-store";
@@ -34,7 +33,6 @@ export default async function ProjectionPage() {
         icon={Target}
         title="Projetado vs Realizado"
         description="Defina metas trimestrais ou mensais. A linha tracejada é o caminho projetado; a área cheia é o realizado puxado da Meta API."
-        actions={<FeedbackButton context="Projeção" />}
       />
 
       <GoalForm currentFollowers={followers} />
