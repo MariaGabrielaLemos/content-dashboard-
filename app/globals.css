@@ -73,6 +73,26 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
+    /* Base 16px — audiência sênior (Fernando 50+) */
+    font-size: 16px;
+    line-height: 1.55;
+  }
+
+  /* Tabular numerals em qualquer número de dashboard — colunas alinham. */
+  .tabular-nums,
+  [class*="tabular"] {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  /* Focus visible — acessibilidade pra navegação por teclado. */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-primary/60 ring-offset-2 ring-offset-background;
+  }
+
+  ::selection {
+    background-color: hsl(var(--primary) / 0.3);
+    color: hsl(var(--foreground));
   }
 
   ::-webkit-scrollbar {
@@ -103,5 +123,33 @@
     .kpi-grid {
       grid-template-columns: repeat(4, minmax(0, 1fr));
     }
+  }
+
+  /* Separador de seção horizontal — uso pontual entre blocos do painel. */
+  .section-divider {
+    @apply relative my-2 h-px w-full bg-gradient-to-r from-transparent via-border to-transparent;
+  }
+
+  /* Eyebrow — rótulo curto de seção em uppercase. */
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground;
+  }
+
+  /* Para o valor principal do KPI — herói. */
+  .kpi-hero-value {
+    @apply text-3xl font-semibold tracking-tight tabular-nums;
+    line-height: 1.1;
+  }
+  @media (min-width: 1280px) {
+    .kpi-hero-value {
+      @apply text-4xl;
+    }
+  }
+}
+
+@layer utilities {
+  /* Subir ligeiramente o contraste do muted-foreground — audiência sênior. */
+  .text-muted-strong {
+    color: hsl(213 12% 78%);
   }
 }

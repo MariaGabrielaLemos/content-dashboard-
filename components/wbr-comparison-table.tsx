@@ -29,16 +29,27 @@ export function WbrComparisonTable({
       </CardHeader>
       <CardContent className="px-0 pb-0">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-[15px]">
             <thead>
-              <tr className="border-b border-border text-[11px] uppercase tracking-wider text-muted-foreground">
-                <th className="px-6 py-3 text-left font-semibold">Métrica</th>
+              <tr className="border-b border-border/80 bg-muted/10">
+                <th
+                  scope="col"
+                  className="px-6 py-3.5 text-left text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground"
+                >
+                  Métrica
+                </th>
                 {columns.map((col) => (
-                  <th key={col.period.id} className="px-4 py-3 text-right font-semibold">
-                    <div className="flex flex-col items-end">
-                      <span className="text-foreground/90">{col.period.label}</span>
-                      <span className="text-[10px] font-normal normal-case text-muted-foreground">
-                        vs período anterior
+                  <th
+                    key={col.period.id}
+                    scope="col"
+                    className="px-4 py-3.5 text-right"
+                  >
+                    <div className="flex flex-col items-end gap-0.5">
+                      <span className="text-[13px] font-semibold text-foreground">
+                        {col.period.label}
+                      </span>
+                      <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
+                        vs anterior
                       </span>
                     </div>
                   </th>
@@ -50,23 +61,25 @@ export function WbrComparisonTable({
                 <tr
                   key={m.key}
                   className={cn(
-                    "border-b border-border/50 last:border-0 transition-colors",
-                    idx % 2 === 0 ? "bg-transparent" : "bg-muted/20",
-                    "hover:bg-muted/40"
+                    "group border-b border-border/30 last:border-0 transition-colors",
+                    idx % 2 === 0 ? "bg-transparent" : "bg-muted/10",
+                    "hover:bg-muted/30"
                   )}
                 >
-                  <td className="px-6 py-3 font-medium text-foreground/90">{m.label}</td>
+                  <td className="px-6 py-3 text-[14px] font-medium text-foreground/95">
+                    {m.label}
+                  </td>
                   {columns.map((col) => {
                     const cur = col.bag.current[m.key];
                     const prev = col.bag.previous[m.key];
                     const d = calcDelta(cur, prev);
                     return (
                       <td key={col.period.id} className="px-4 py-3">
-                        <div className="flex flex-col items-end gap-1">
-                          <span className="text-base font-semibold tabular-nums">
+                        <div className="flex items-baseline justify-end gap-2.5">
+                          <DeltaBadge delta={d} size="sm" />
+                          <span className="min-w-[4ch] text-right text-[16px] font-semibold tabular-nums text-foreground">
                             {formatMetric(cur, m.format)}
                           </span>
-                          <DeltaBadge delta={d} size="sm" />
                         </div>
                       </td>
                     );
