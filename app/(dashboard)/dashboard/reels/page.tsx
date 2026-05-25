@@ -1,7 +1,7 @@
 import { Film, Play, Eye, Heart, MessageCircle, ExternalLink, Clock } from "lucide-react";
 import Link from "next/link";
-import { format, parseISO, subDays, eachDayOfInterval, isSameDay } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { format, subDays, eachDayOfInterval, isSameDay } from "date-fns";
+import { fmtBR } from "@/lib/datetime";
 import { SectionHeader } from "@/components/section-header";
 import { KpiCard } from "@/components/kpi-card";
 import { Card, CardContent } from "@/components/ui/card";
@@ -83,7 +83,7 @@ export default async function ReelsPage({
 
   const fetchedAt = getLastFetchedAt();
   const fetchedLabel = fetchedAt
-    ? `atualizado ${format(parseISO(fetchedAt), "dd/MM 'às' HH:mm", { locale: ptBR })}`
+    ? `atualizado ${fmtBR(fetchedAt)}`
     : "Sem dados de coleta";
 
   return (
@@ -238,7 +238,7 @@ function ReelRow({
               <Badge variant="outline">Reel</Badge>
               <span className="flex items-center gap-1 text-muted-foreground">
                 <Clock className="h-3 w-3" />
-                {format(parseISO(reel.timestamp), "dd/MM/yyyy", { locale: ptBR })}
+                {fmtBR(reel.timestamp, "dd/MM/yyyy")}
               </span>
               <Link
                 href={reel.permalink}

@@ -1,6 +1,5 @@
 import { MessageSquare, ThumbsUp, ThumbsDown, Lightbulb } from "lucide-react";
-import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { fmtBR } from "@/lib/datetime";
 import { SectionHeader } from "@/components/section-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -91,9 +90,7 @@ function FeedbackCard({ item }: { item: Feedback }) {
               <span className="text-muted-foreground">{item.context}</span>
               <span className="text-muted-foreground/70">·</span>
               <span className="text-muted-foreground">
-                {format(parseISO(item.timestamp), "dd/MM/yyyy 'às' HH:mm", {
-                  locale: ptBR,
-                })}
+                {fmtBR(item.timestamp, "dd/MM/yyyy 'às' HH:mm")}
               </span>
               <span className="ml-auto">
                 <FeedbackStatusSelect id={item.id} status={item.status} />

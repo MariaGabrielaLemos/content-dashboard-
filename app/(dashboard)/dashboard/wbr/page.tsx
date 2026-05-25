@@ -1,6 +1,6 @@
 import { FileBarChart2, Calendar } from "lucide-react";
-import { format, subDays, eachDayOfInterval, isSameDay, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { format, subDays, eachDayOfInterval, isSameDay } from "date-fns";
+import { fmtBR } from "@/lib/datetime";
 import { SectionHeader } from "@/components/section-header";
 import { WbrComparisonTable } from "@/components/wbr-comparison-table";
 import { WeeklySummary } from "@/components/weekly-summary";
@@ -31,17 +31,34 @@ export default async function WbrPage({
   const params = await searchParams;
   const mode: Mode = params.mode === "quarter" ? "quarter" : "rolling";
 
+  // sinceDate adaptativo:
+  //   rolling → 200d cobre rolling-90 + janela anterior (180d) com folga
+  //   quarter → vai até o início do trimestre anterior ao selecionado
+  const nowRef = new Date();
+  let sinceDate: Date;
+  if (mode === "quarter") {
+    const quartersList = availableQuarters(nowRef);
+    const selSel = params.quarter ?? `${quartersList[0].year}-Q${quartersList[0].q}`;
+    const [ySel, qSelStr] = selSel.split("-Q");
+    const yNum = Number(ySel);
+    const qNum = Number(qSelStr) as 1 | 2 | 3 | 4;
+    const selPeriod = quarterPeriod(yNum, qNum);
+    sinceDate = selPeriod.previous.start;
+  } else {
+    sinceDate = subDays(nowRef, 200);
+  }
+
   const [profile, allMedia] = await Promise.all([
     getProfile(),
-    getMediaWithInsights(120),
+    getMediaWithInsights({ sinceDate }),
   ]);
 
   const followers = profile?.followers_count ?? 0;
   const now = new Date();
   const fetchedAt = getLastFetchedAt();
   const fetchedLabel = fetchedAt
-    ? `atualizado ${format(parseISO(fetchedAt), "dd/MM 'às' HH:mm", { locale: ptBR })}`
-    : `carregado em ${format(now, "dd/MM 'às' HH:mm", { locale: ptBR })}`;
+    ? `atualizado ${fmtBR(fetchedAt)}`
+    : `carregado em ${fmtBR(now)}`;
 
   // ---------------- Comparativo principal ----------------
   let comparisonColumns: { period: Period; bag: BagWithPrev }[] = [];

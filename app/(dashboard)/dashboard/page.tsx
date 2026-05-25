@@ -14,8 +14,8 @@ import {
   PlayCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { format, eachDayOfInterval, subDays, isSameDay, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { format, eachDayOfInterval, subDays, isSameDay } from "date-fns";
+import { fmtBR } from "@/lib/datetime";
 import { SectionHeader } from "@/components/section-header";
 import { KpiCard } from "@/components/kpi-card";
 import { EvolutionChart, type DailyMetric } from "@/components/evolution-chart";
@@ -33,17 +33,20 @@ import {
 } from "@/lib/wbr";
 
 export default async function OverviewPage() {
+  // Painel mostra 7d + delta vs 7d anterior + evolução 30d.
+  // Janela mínima: 30d. Margem 2x (60d) pra cobrir delta sem cortar bordas.
+  const sinceDate = subDays(new Date(), 60);
   const [profile, media] = await Promise.all([
     getProfile(),
-    getMediaWithInsights(60),
+    getMediaWithInsights({ sinceDate }),
   ]);
 
   const followers = profile?.followers_count ?? 0;
   const now = new Date();
   const fetchedAt = getLastFetchedAt();
   const fetchedLabel = fetchedAt
-    ? `Atualizado ${format(parseISO(fetchedAt), "dd/MM 'às' HH:mm", { locale: ptBR })}`
-    : `Carregado em ${format(now, "dd/MM 'às' HH:mm", { locale: ptBR })}`;
+    ? `Atualizado ${fmtBR(fetchedAt)}`
+    : `Carregado em ${fmtBR(now)}`;
 
   const week = rollingPeriod(7, now);
   const month = rollingPeriod(30, now);
