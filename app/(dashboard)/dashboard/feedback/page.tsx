@@ -7,6 +7,9 @@ import { EmptyState } from "@/components/empty-state";
 import { FeedbackStatusSelect } from "@/components/feedback-status-select";
 import { listFeedback, type Feedback } from "@/lib/feedback-store";
 
+// Postgres backed (DATABASE_URL injetado em runtime pelo Coolify) — não prerender.
+export const dynamic = "force-dynamic";
+
 const SENTIMENT_META = {
   positive: {
     label: "Aprovado",

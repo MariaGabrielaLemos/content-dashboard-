@@ -66,11 +66,32 @@ Quando a Meta API não responder (token expirado ou ausente), as páginas mostra
 
 ## Deploy
 
-Antes do deploy real:
+Esta dashboard roda no **Coolify VPS Drop Studios** em https://fernando.dropstudios.com.br.
 
-1. Trocar storage de `feedback` e `goals` (hoje em `data/*.json`) por DB persistente (recomendado: Supabase).
-2. Adicionar autenticação (Fernando + equipe Drop). Hoje não há login.
-3. Plugar histórico de seguidores via job diário (snapshot em DB).
+**Workflow Maria (mesmo de antes, só muda destino):**
+1. Edita código local
+2. `git push origin master`
+3. Coolify detecta o push, builda Dockerfile e faz deploy automático (~2 min)
+4. Verifica https://fernando.dropstudios.com.br
+
+**Stack:**
+- Build: Dockerfile multi-stage Next.js standalone
+- Banco: PostgreSQL self-hosted (banco `dropstudios_meta`)
+- Env vars: gerenciadas no painel Coolify (não commitar `.env.production`)
+
+**Setup local (dev):**
+
+```bash
+cp .env.example .env.local
+# preencher INSTAGRAM_ACCESS_TOKEN, DATABASE_URL
+npm install
+npm run dev
+```
+
+**Pendências de deploy real:**
+
+1. Autenticação (Fernando + equipe Drop) — hoje não há login.
+2. Histórico de seguidores via job diário (snapshot em DB).
 
 ## Pendente (não bloqueia apresentação)
 
