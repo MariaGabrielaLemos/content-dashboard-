@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 /**
  * /dashboard/debug — Spot-check Maria/Fernando vs MLabs / Instagram nativo.
  *

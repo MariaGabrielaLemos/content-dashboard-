@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import {
   FileBarChart2,
   Target,

@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { Target, TrendingUp, Calendar, AlertCircle } from "lucide-react";
 import { differenceInDays, format, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
