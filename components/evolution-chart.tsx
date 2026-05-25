@@ -115,10 +115,22 @@ export function EvolutionChart({
             }}
             stroke="hsl(var(--border))"
           />
+          {/* Bug #3: dois eixos — reach (esquerda) e engagement (direita). Reach é
+              tipicamente 10-100x maior que engagement, então um YAxis único achata
+              a série de engagement. Cor do tick combina com a cor da série. */}
           <YAxis
-            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
-            stroke="hsl(var(--border))"
-            width={44}
+            yAxisId="left"
+            orientation="left"
+            tick={{ fill: "hsl(var(--chart-1))", fontSize: 11 }}
+            stroke="hsl(var(--chart-1))"
+            width={48}
+          />
+          <YAxis
+            yAxisId="right"
+            orientation="right"
+            tick={{ fill: "hsl(var(--chart-4))", fontSize: 11 }}
+            stroke="hsl(var(--chart-4))"
+            width={48}
           />
           <Tooltip
             contentStyle={{
@@ -135,6 +147,7 @@ export function EvolutionChart({
           />
           {visible.reach && (
             <Area
+              yAxisId="left"
               type="monotone"
               dataKey="reach"
               stroke="hsl(var(--chart-1))"
@@ -145,6 +158,7 @@ export function EvolutionChart({
           )}
           {visible.engagement && (
             <Area
+              yAxisId="right"
               type="monotone"
               dataKey="engagement"
               stroke="hsl(var(--chart-4))"
