@@ -1,8 +1,19 @@
 /**
  * Storage simples de feedback do Fernando.
  *
- * V1 = arquivo JSON local em `data/feedback.json` (gitignored).
- * Quando a dashboard for pra produção (Vercel), trocar por DB (Supabase recomendado).
+ * ⚠️ QUEBRADO EM PRODUÇÃO — escreve em filesystem, Vercel é stateless.
+ * Submit via FAB nunca persiste entre invocações de function. Por isso o
+ * feedback do Fernando de 2026-05-25 nunca chegou no painel.
+ *
+ * Fix vem no PR #4 junto com migração Vercel→Coolify VPS Drop. Nesse PR a
+ * dashboard sai do Vercel pra rodar em `fernando.dropstudios.com.br` e este
+ * store é reescrito usando `pg` client direto na tabela
+ * `wbr_feedback_fernando` em `dropstudios_meta`.
+ *
+ * NÃO ALTERAR este arquivo até PR #4 — em dev local funciona (filesystem
+ * persiste), só prod que falha.
+ *
+ * Ver: docs/feedback-fernando-2026-05-25.md (Bug #4)
  */
 import { promises as fs } from "fs";
 import path from "path";
