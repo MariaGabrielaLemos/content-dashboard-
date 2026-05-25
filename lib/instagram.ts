@@ -156,6 +156,95 @@ export async function getRecentMedia(limit = 25): Promise<IGMedia[]> {
   }
 }
 
+/**
+ * Pagina o endpoint /{ig}/media seguindo `paging.next` do Graph API v21+ até
+ * cobrir uma data mínima (`sinceDate`) ou um hard cap (`maxItems`).
+ *
+ * Por que existe: `getRecentMedia(60)` trunca janelas grandes (Q1/Q2 trimestral,
+ * "Melhores posts" 6 meses). Sem paginação, posts do C. Ronaldo e tênis somem
+ * do top-posts quando estão fora dos 60 mais recentes.
+ *
+ * Cuidado com rate limit: 100ms de pause entre páginas é razoável pra contas
+ * típicas. Meta default = ~200 calls/h por user.
+ */
+export async function getAllRecentMedia(
+  opts: { sinceDate?: Date; maxItems?: number; pageSize?: number } = {}
+): Promise<IGMedia[]> {
+  if (!isConfigured) return [];
+
+  const { sinceDate, maxItems = 500, pageSize = 50 } = opts;
+  const fields =
+    "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count";
+  const sinceMs = sinceDate ? sinceDate.getTime() : 0;
+
+  const all: IGMedia[] = [];
+  // Primeira página
+  let nextUrl: string | null = url(`${SELF_PATH}/media`, {
+    fields,
+    limit: String(pageSize),
+  });
+  let pages = 0;
+  const MAX_PAGES = 30; // cap defensivo (30 × 50 = 1500 posts)
+
+  while (nextUrl && pages < MAX_PAGES && all.length < maxItems) {
+    pages += 1;
+    try {
+      const res: Response = await fetch(nextUrl, {
+        next: { revalidate: 300 },
+      });
+      if (!res.ok) {
+        logApiError(
+          `${SELF_PATH}/media (page ${pages})`,
+          res.status,
+          await res.json().catch(() => null)
+        );
+        break;
+      }
+      const json: {
+        data?: IGMedia[];
+        paging?: { next?: string };
+        error?: unknown;
+      } = await res.json();
+      if (json.error) {
+        logApiError(`${SELF_PATH}/media (page ${pages})`, res.status, json);
+        break;
+      }
+      const page = json.data ?? [];
+      all.push(...page);
+
+      // Stop se a página mais antiga já passou da janela
+      const oldestInPage = page[page.length - 1];
+      if (
+        sinceMs > 0 &&
+        oldestInPage &&
+        new Date(oldestInPage.timestamp).getTime() < sinceMs
+      ) {
+        break;
+      }
+
+      nextUrl = json.paging?.next ?? null;
+
+      // Rate-limit cushion
+      if (nextUrl) {
+        await new Promise((r) => setTimeout(r, 100));
+      }
+    } catch (e) {
+      console.warn(
+        `[instagram] getAllRecentMedia page ${pages} threw:`,
+        e
+      );
+      break;
+    }
+  }
+
+  // Filtro pós-paginação: respeitar sinceDate (a última página pode trazer itens antigos demais)
+  const filtered = sinceMs > 0
+    ? all.filter((m) => new Date(m.timestamp).getTime() >= sinceMs)
+    : all;
+
+  return filtered.slice(0, maxItems);
+}
+
 /** Insights por mídia — Meta v22+: views substitui plays/impressions. */
 async function getMediaInsights(
   mediaId: string,
@@ -206,10 +295,12 @@ async function getMediaInsights(
  * Cache disco simples pra getMediaWithInsights — evita 60+ chamadas Meta a cada render.
  * TTL default 1h. Chave por (IG_ID, limit). Arquivos em `_cache/insights-{key}.json`.
  *
- * NÃO usar em prod (Vercel é stateless). Pra produção, trocar por Supabase/Redis.
+ * NÃO usar em prod (Vercel é stateless). PR #4 vai migrar pra Coolify VPS,
+ * onde filesystem persiste — aí este cache funciona de verdade, ou migra
+ * pra tabela postgres em `dropstudios_meta` (decisão lá).
  */
 const CACHE_DIR = path.join(process.cwd(), "_cache");
-const CACHE_TTL_MS = 60 * 60 * 1000; // 1h
+const CACHE_TTL_MS = 30 * 60 * 1000; // 30min — Fernando pediu refresh mais frequente
 
 interface CachedPayload {
   fetched_at: string;
@@ -252,18 +343,47 @@ export function getLastFetchedAt(): string | null {
 }
 
 /**
- * Busca mídias recentes + insights por mídia em paralelo, com cache disco 1h.
- * Tolerante a falha: posts sem insights ainda são retornados sem reach/impressions.
+ * Busca mídias recentes + insights por mídia em paralelo, com cache disco 30min.
+ *
+ * Aceita 3 modos de chamada (compat backwards):
+ *   - `getMediaWithInsights(60)` → últimos 60 posts (legacy)
+ *   - `getMediaWithInsights({ limit: 60, bypassCache: true })` → forma object
+ *   - `getMediaWithInsights({ sinceDate: <Date> })` → pagina até cobrir a data,
+ *     hard cap 500. Use isto pra WBR Q1/Q2 trimestral e top-posts 6 meses.
+ *
+ * Tolerante a falha: posts sem insights ainda são retornados sem reach/views.
+ *
+ * **Cache disco NÃO funciona em Vercel (stateless)** — em prod, cada cold start
+ * refaz o fetch. TTL 30min é só pra dev local; em prod, vale o `revalidate: 300`
+ * do `next.fetch` (5min) que opera na CDN da Vercel.
  */
+type InsightsOpts = {
+  limit?: number;
+  sinceDate?: Date;
+  maxItems?: number;
+  bypassCache?: boolean;
+};
+
 export async function getMediaWithInsights(
-  limit = 60,
-  options: { bypassCache?: boolean } = {}
+  optsOrLimit: number | InsightsOpts = 60,
+  legacyOpts: { bypassCache?: boolean } = {}
 ): Promise<IGMedia[]> {
   if (!isConfigured) return [];
 
-  const key = `${IG_ID || "me"}-${limit}`;
+  const opts: InsightsOpts =
+    typeof optsOrLimit === "number"
+      ? { limit: optsOrLimit, ...legacyOpts }
+      : optsOrLimit;
 
-  if (!options.bypassCache) {
+  const { limit, sinceDate, maxItems = 500, bypassCache = false } = opts;
+
+  // Chave de cache estável por janela (sinceDate vira tag YYYY-MM-DD pra cache hits compartilhados)
+  const cacheTag = sinceDate
+    ? `since-${sinceDate.toISOString().slice(0, 10)}`
+    : `limit-${limit ?? 60}`;
+  const key = `${IG_ID || "me"}-${cacheTag}`;
+
+  if (!bypassCache) {
     const cached = await readCache(key);
     if (cached) {
       lastFetchedAt = cached.fetched_at;
@@ -271,7 +391,10 @@ export async function getMediaWithInsights(
     }
   }
 
-  const media = await getRecentMedia(limit);
+  const media = sinceDate
+    ? await getAllRecentMedia({ sinceDate, maxItems })
+    : await getRecentMedia(limit ?? 60);
+
   if (media.length === 0) {
     lastFetchedAt = new Date().toISOString();
     return [];
