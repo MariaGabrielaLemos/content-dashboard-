@@ -21,11 +21,34 @@ export function WbrComparisonTable({
   title = "Comparativo de períodos",
   description,
 }: Props) {
+  // Bug #5: labels explícitos por coluna pra evitar leitura cross-comparison entre 7d/30d/90d.
+  // Cada coluna é uma janela independente comparada à sua PRÓPRIA janela anterior — não comparar entre colunas.
+  function columnHeaderLabel(p: Period): { main: string; sub: string } {
+    if (p.kind === "rolling-7")
+      return { main: "Últimos 7 dias", sub: "vs 7 dias anteriores" };
+    if (p.kind === "rolling-30")
+      return { main: "Últimos 30 dias", sub: "vs 30 dias anteriores" };
+    if (p.kind === "rolling-90")
+      return { main: "Últimos 90 dias", sub: "vs 90 dias anteriores" };
+    if (p.kind === "quarter")
+      return { main: p.label, sub: "vs trimestre anterior" };
+    return { main: p.label, sub: "vs janela anterior" };
+  }
+
+  const isMultiColumn = columns.length > 1;
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-base">{title}</CardTitle>
         {description && <CardDescription>{description}</CardDescription>}
+        {isMultiColumn && (
+          <p className="mt-2 rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-[11px] leading-snug text-amber-200/90">
+            <strong className="font-semibold">Atenção:</strong> cada coluna é uma janela
+            independente comparada à sua própria janela anterior. Os números entre
+            colunas não são comparáveis (representam intervalos de tempo diferentes).
+          </p>
+        )}
       </CardHeader>
       <CardContent className="px-0 pb-0">
         <div className="overflow-x-auto">
@@ -38,22 +61,25 @@ export function WbrComparisonTable({
                 >
                   Métrica
                 </th>
-                {columns.map((col) => (
-                  <th
-                    key={col.period.id}
-                    scope="col"
-                    className="px-4 py-3.5 text-right"
-                  >
-                    <div className="flex flex-col items-end gap-0.5">
-                      <span className="text-[13px] font-semibold text-foreground">
-                        {col.period.label}
-                      </span>
-                      <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
-                        vs anterior
-                      </span>
-                    </div>
-                  </th>
-                ))}
+                {columns.map((col) => {
+                  const lbl = columnHeaderLabel(col.period);
+                  return (
+                    <th
+                      key={col.period.id}
+                      scope="col"
+                      className="px-4 py-3.5 text-right"
+                    >
+                      <div className="flex flex-col items-end gap-0.5">
+                        <span className="text-[13px] font-semibold text-foreground">
+                          {lbl.main}
+                        </span>
+                        <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
+                          {lbl.sub}
+                        </span>
+                      </div>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
