@@ -1,22 +1,14 @@
 /**
- * Storage simples de feedback do Fernando.
+ * Feedback queue do Fernando.
  *
- * ⚠️ QUEBRADO EM PRODUÇÃO — escreve em filesystem, Vercel é stateless.
- * Submit via FAB nunca persiste entre invocações de function. Por isso o
- * feedback do Fernando de 2026-05-25 nunca chegou no painel.
+ * V2 (PR #4, 2026-05-25) — Postgres self-hosted Drop Studios (banco `dropstudios_meta`).
+ * Antes era JSON em disco; quebrou em Vercel stateless (feedback do Fernando 2026-05-25
+ * sumiu). Migrou junto com a dashboard pra Coolify VPS Drop.
  *
- * Fix vem no PR #4 junto com migração Vercel→Coolify VPS Drop. Nesse PR a
- * dashboard sai do Vercel pra rodar em `fernando.dropstudios.com.br` e este
- * store é reescrito usando `pg` client direto na tabela
- * `wbr_feedback_fernando` em `dropstudios_meta`.
- *
- * NÃO ALTERAR este arquivo até PR #4 — em dev local funciona (filesystem
- * persiste), só prod que falha.
- *
- * Ver: docs/feedback-fernando-2026-05-25.md (Bug #4)
+ * Schema: `db/migrations/001_wbr_feedback_fernando.sql`.
+ * Interface pública mantida — consumers não precisam mudar.
  */
-import { promises as fs } from "fs";
-import path from "path";
+import { Pool } from "pg";
 
 export type FeedbackStatus = "open" | "queued" | "shipped" | "wontfix";
 
@@ -36,36 +28,49 @@ export const FEEDBACK_STATUS_VALUES: FeedbackStatus[] = [
   "wontfix",
 ];
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const FILE = path.join(DATA_DIR, "feedback.json");
+// Pool singleton — sobrevive hot-reload do Next.js dev via globalThis.
+const globalForPg = globalThis as unknown as { __wbrPgPool?: Pool };
 
-async function ensureFile() {
-  try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    await fs.access(FILE);
-  } catch {
-    await fs.writeFile(FILE, "[]", "utf-8");
+function getPool(): Pool {
+  if (globalForPg.__wbrPgPool) return globalForPg.__wbrPgPool;
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    throw new Error(
+      "DATABASE_URL não está setado — feedback queue precisa do postgres do Drop (dropstudios_meta)."
+    );
   }
+  const pool = new Pool({ connectionString: url, max: 5 });
+  globalForPg.__wbrPgPool = pool;
+  return pool;
+}
+
+interface FeedbackRow {
+  id: string;
+  context: string;
+  sentiment: Feedback["sentiment"];
+  message: string;
+  timestamp: Date;
+  status: FeedbackStatus;
+}
+
+function rowToFeedback(r: FeedbackRow): Feedback {
+  return {
+    id: r.id,
+    context: r.context,
+    sentiment: r.sentiment,
+    message: r.message,
+    timestamp: r.timestamp.toISOString(),
+    status: r.status,
+  };
 }
 
 export async function listFeedback(): Promise<Feedback[]> {
-  await ensureFile();
-  try {
-    const raw = await fs.readFile(FILE, "utf-8");
-    const data = JSON.parse(raw) as Partial<Feedback>[];
-    return data
-      .map((d) => ({
-        id: d.id ?? "",
-        context: d.context ?? "",
-        sentiment: (d.sentiment ?? "suggestion") as Feedback["sentiment"],
-        message: d.message ?? "",
-        timestamp: d.timestamp ?? new Date().toISOString(),
-        status: (d.status ?? "open") as FeedbackStatus,
-      }))
-      .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
-  } catch {
-    return [];
-  }
+  const { rows } = await getPool().query<FeedbackRow>(
+    `select id, context, sentiment, message, timestamp, status
+       from wbr_feedback_fernando
+      order by timestamp desc`
+  );
+  return rows.map(rowToFeedback);
 }
 
 export async function addFeedback(input: {
@@ -73,28 +78,27 @@ export async function addFeedback(input: {
   sentiment: Feedback["sentiment"];
   message: string;
 }): Promise<Feedback> {
-  await ensureFile();
-  const all = await listFeedback();
-  const entry: Feedback = {
-    id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-    context: input.context,
-    sentiment: input.sentiment,
-    message: input.message,
-    timestamp: new Date().toISOString(),
-    status: "open",
-  };
-  await fs.writeFile(FILE, JSON.stringify([entry, ...all], null, 2), "utf-8");
-  return entry;
+  const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  const { rows } = await getPool().query<FeedbackRow>(
+    `insert into wbr_feedback_fernando (id, context, sentiment, message)
+          values ($1, $2, $3, $4)
+       returning id, context, sentiment, message, timestamp, status`,
+    [id, input.context, input.sentiment, input.message]
+  );
+  return rowToFeedback(rows[0]);
 }
 
 export async function updateFeedbackStatus(
   id: string,
   status: FeedbackStatus
 ): Promise<Feedback | null> {
-  const all = await listFeedback();
-  const idx = all.findIndex((f) => f.id === id);
-  if (idx === -1) return null;
-  all[idx] = { ...all[idx], status };
-  await fs.writeFile(FILE, JSON.stringify(all, null, 2), "utf-8");
-  return all[idx];
+  const { rows } = await getPool().query<FeedbackRow>(
+    `update wbr_feedback_fernando
+        set status = $2
+      where id = $1
+   returning id, context, sentiment, message, timestamp, status`,
+    [id, status]
+  );
+  if (rows.length === 0) return null;
+  return rowToFeedback(rows[0]);
 }
