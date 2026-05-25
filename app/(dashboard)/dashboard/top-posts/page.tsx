@@ -9,10 +9,14 @@ import {
   TrendingUp,
   Lightbulb,
   ExternalLink,
+  Eye,
+  Send,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { getProfile, getRecentMedia, IGMedia } from "@/lib/instagram";
+import { getProfile, getMediaWithInsights, IGMedia } from "@/lib/instagram";
+import { fmtBR } from "@/lib/datetime";
+import { subMonths } from "date-fns";
 
 function formatCount(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -21,11 +25,8 @@ function formatCount(n: number): string {
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  // Sempre formatar em BRT (Vercel server roda em UTC).
+  return fmtBR(iso, "dd 'de' MMM 'de' yyyy");
 }
 
 function mediaLabel(type: IGMedia["media_type"]) {
@@ -121,13 +122,13 @@ function analyzePost(
 }
 
 export default async function TopPostsPage() {
+  // Janela 6 meses (Fernando notou posts do Ronaldo/tênis faltando — provavelmente
+  // estavam fora dos 60-100 mais recentes). Bug #2 spec.
+  const sixMonthsAgo = subMonths(new Date(), 6);
   const [profile, allMedia] = await Promise.all([
     getProfile(),
-    getRecentMedia(100),
+    getMediaWithInsights({ sinceDate: sixMonthsAgo }),
   ]);
-
-  const sixMonthsAgo = new Date();
-  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
   const topPosts = allMedia
     .filter((m) => new Date(m.timestamp) >= sixMonthsAgo)
@@ -242,8 +243,19 @@ export default async function TopPostsPage() {
                     </div>
                   </div>
 
-                  {/* Métricas individuais */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {/* Métricas individuais (Bug #6: Views + Shares adicionados ao lado de Likes/Comments) */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                    <div className="rounded-lg bg-muted/50 p-3 space-y-1">
+                      <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide flex items-center gap-1">
+                        <Eye className="h-3 w-3" /> Views
+                      </p>
+                      <p className="text-xl font-bold">
+                        {post.views != null || post.plays != null
+                          ? formatCount(post.views ?? post.plays ?? 0)
+                          : "—"}
+                      </p>
+                    </div>
+
                     <div className="rounded-lg bg-muted/50 p-3 space-y-1">
                       <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide flex items-center gap-1">
                         <Heart className="h-3 w-3" /> Curtidas
@@ -266,6 +278,16 @@ export default async function TopPostsPage() {
                           +{Math.round(((post.comments_count - avgComments) / avgComments) * 100)}% vs média
                         </p>
                       )}
+                    </div>
+
+                    <div className="rounded-lg bg-muted/50 p-3 space-y-1">
+                      <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide flex items-center gap-1">
+                        <Send className="h-3 w-3" /> Shares
+                      </p>
+                      <p className="text-xl font-bold">
+                        {post.shares != null ? formatCount(post.shares) : "—"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">setinhas</p>
                     </div>
 
                     <div className="rounded-lg bg-muted/50 p-3 space-y-1">
