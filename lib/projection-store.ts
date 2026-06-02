@@ -20,20 +20,34 @@ export interface Goal {
 const DATA_DIR = path.join(process.cwd(), "data");
 const FILE = path.join(DATA_DIR, "goals.json");
 
-async function ensureFile() {
+/**
+ * Garante o arquivo de metas. Best-effort: se o filesystem não for gravável
+ * (ex: container standalone rodando como user sem permissão em /app/data),
+ * NUNCA lança — apenas falha silenciosamente. O crash de SSR da página
+ * Projetado vs Realizado (ENOENT em /app/data/goals.json) vinha daqui:
+ * o writeFile do catch estourava quando o mkdir falhava.
+ */
+async function ensureFile(): Promise<void> {
   try {
     await fs.mkdir(DATA_DIR, { recursive: true });
     await fs.access(FILE);
   } catch {
-    await fs.writeFile(FILE, "[]", "utf-8");
+    try {
+      await fs.writeFile(FILE, "[]", "utf-8");
+    } catch {
+      /* filesystem read-only / sem permissão — segue com leitura tolerante */
+    }
   }
 }
 
 export async function listGoals(): Promise<Goal[]> {
-  await ensureFile();
+  // Tolerante a falha total: qualquer erro de FS retorna lista vazia em vez de
+  // derrubar o Server Component que consome isto.
   try {
+    await ensureFile();
     const raw = await fs.readFile(FILE, "utf-8");
-    return JSON.parse(raw) as Goal[];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as Goal[]) : [];
   } catch {
     return [];
   }

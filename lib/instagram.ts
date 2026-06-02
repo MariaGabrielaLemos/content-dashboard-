@@ -113,7 +113,7 @@ export async function getProfile(): Promise<IGProfile | null> {
   try {
     const res = await fetch(url(SELF_PATH, {
       fields: "username,name,followers_count,media_count,profile_picture_url",
-    }), { next: { revalidate: 300 } });
+    }), { cache: "no-store" });
     if (!res.ok) {
       logApiError(endpoint, res.status, await res.json().catch(() => null));
       return null;
@@ -138,7 +138,7 @@ export async function getRecentMedia(limit = 25): Promise<IGMedia[]> {
   try {
     const res = await fetch(
       url(`${SELF_PATH}/media`, { fields, limit: String(limit) }),
-      { next: { revalidate: 300 } }
+      { cache: "no-store" }
     );
     if (!res.ok) {
       logApiError(endpoint, res.status, await res.json().catch(() => null));
@@ -190,7 +190,7 @@ export async function getAllRecentMedia(
     pages += 1;
     try {
       const res: Response = await fetch(nextUrl, {
-        next: { revalidate: 300 },
+        cache: "no-store",
       });
       if (!res.ok) {
         logApiError(
@@ -258,7 +258,7 @@ async function getMediaInsights(
   const endpoint = `/${mediaId}/insights?metric=${fields}`;
   try {
     const res = await fetch(url(`/${mediaId}/insights`, { metric: fields }), {
-      next: { revalidate: 600 },
+      cache: "no-store",
     });
     if (!res.ok) {
       logApiError(endpoint, res.status, await res.json().catch(() => null));
@@ -459,7 +459,7 @@ export async function getUserInsights(): Promise<IGUserInsights | null> {
         metric: "reach,impressions,profile_views,follower_count",
         period: "days_28",
       }),
-      { next: { revalidate: 600 } }
+      { cache: "no-store" }
     );
     if (!res.ok) {
       logApiError(endpoint, res.status, await res.json().catch(() => null));
