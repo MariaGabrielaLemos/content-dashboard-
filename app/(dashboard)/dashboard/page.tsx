@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
 import { getProfile, getMediaWithInsights, getLastFetchedAt } from "@/lib/instagram";
+import { recordTodaySnapshot } from "@/lib/followers-store";
 import {
   rollingPeriod,
   bagForPeriod,
@@ -44,6 +45,9 @@ export default async function OverviewPage() {
   ]);
 
   const followers = profile?.followers_count ?? 0;
+  // Grava o snapshot diário de seguidores (best-effort) pro comparativo WBR
+  // acumular histórico de crescimento. Tolerante a falha — nunca derruba o painel.
+  await recordTodaySnapshot(followers);
   const now = new Date();
   const fetchedAt = getLastFetchedAt();
   const fetchedLabel = fetchedAt

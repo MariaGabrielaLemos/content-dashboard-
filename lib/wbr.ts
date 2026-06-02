@@ -193,14 +193,23 @@ export function aggregatePosts(
   };
 }
 
-/** Retorna BagWithPrev a partir de uma lista de posts e um Period. */
+/**
+ * Retorna BagWithPrev a partir de uma lista de posts e um Period.
+ *
+ * `followers` = total ao FIM da janela atual. `previousFollowers` = total ao fim
+ * da janela anterior (snapshot histórico). Quando o snapshot histórico existe, o
+ * comparativo de "Seguidores" mostra crescimento real em vez de delta zero
+ * (pedido do Fernando, feedback 02/06). Default: usa o mesmo valor pra ambos
+ * (compat — degrada pra delta zero quando não há histórico).
+ */
 export function bagForPeriod(
   posts: PostLike[],
   period: Period,
-  followers: number
+  followers: number,
+  previousFollowers: number = followers
 ): BagWithPrev {
   const current = aggregatePosts(posts, { start: period.start, end: period.end }, followers);
-  const previous = aggregatePosts(posts, period.previous, followers);
+  const previous = aggregatePosts(posts, period.previous, previousFollowers);
   return { current, previous };
 }
 

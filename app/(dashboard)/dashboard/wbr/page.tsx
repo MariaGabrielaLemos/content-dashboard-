@@ -11,7 +11,17 @@ import { RefreshButton } from "@/components/refresh-button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
-import { getProfile, getMediaWithInsights, getLastFetchedAt } from "@/lib/instagram";
+import {
+  getProfile,
+  getMediaWithInsights,
+  getLastFetchedAt,
+  getFollowerCountDaily,
+} from "@/lib/instagram";
+import {
+  recordTodaySnapshot,
+  backfillFromDeltas,
+  getSnapshotAsOf,
+} from "@/lib/followers-store";
 import {
   rollingPeriod,
   quarterPeriod,
@@ -60,6 +70,16 @@ export default async function WbrPage({
     ? `atualizado ${fmtBR(fetchedAt)}`
     : `carregado em ${fmtBR(now)}`;
 
+  // Snapshots de seguidores (best-effort): grava o total de hoje e, se ainda não
+  // há histórico de ~30d, faz backfill aproximado da Meta. Stores são tolerantes
+  // a falha — nunca derrubam o render. Pedido do Fernando (feedback 02/06).
+  await recordTodaySnapshot(followers);
+  if (followers > 0 && (await getSnapshotAsOf(subDays(now, 29))) === null) {
+    await backfillFromDeltas(followers, await getFollowerCountDaily());
+  }
+  // "Seguidores ao fim" de uma janela (cai pro total de hoje quando não há histórico).
+  const followersAt = async (d: Date) => (await getSnapshotAsOf(d)) ?? followers;
+
   // ---------------- Comparativo principal ----------------
   let comparisonColumns: { period: Period; bag: BagWithPrev }[] = [];
   let mainPeriod: Period | null = null;
@@ -70,10 +90,17 @@ export default async function WbrPage({
       rollingPeriod(30, now),
       rollingPeriod(90, now),
     ];
-    comparisonColumns = periods.map((p) => ({
-      period: p,
-      bag: bagForPeriod(allMedia, p, followers),
-    }));
+    comparisonColumns = await Promise.all(
+      periods.map(async (p) => ({
+        period: p,
+        bag: bagForPeriod(
+          allMedia,
+          p,
+          await followersAt(p.end),
+          await followersAt(p.previous.end)
+        ),
+      }))
+    );
     mainPeriod = periods[0];
   } else {
     const quarters = availableQuarters(now);
@@ -82,13 +109,28 @@ export default async function WbrPage({
     const y = Number(yStr);
     const q = Number(qStr) as 1 | 2 | 3 | 4;
     const period = quarterPeriod(y, q);
-    comparisonColumns = [{ period, bag: bagForPeriod(allMedia, period, followers) }];
+    comparisonColumns = [
+      {
+        period,
+        bag: bagForPeriod(
+          allMedia,
+          period,
+          await followersAt(period.end),
+          await followersAt(period.previous.end)
+        ),
+      },
+    ];
     mainPeriod = period;
   }
 
   // Resumo semanal sempre é a última semana (gatilho operacional da WBR)
   const lastWeekPeriod = rollingPeriod(7, now);
-  const lastWeekBag = bagForPeriod(allMedia, lastWeekPeriod, followers);
+  const lastWeekBag = bagForPeriod(
+    allMedia,
+    lastWeekPeriod,
+    await followersAt(lastWeekPeriod.end),
+    await followersAt(lastWeekPeriod.previous.end)
+  );
 
   // ---------------- Série de evolução 30d ----------------
   const evolutionData: DailyMetric[] = eachDayOfInterval({

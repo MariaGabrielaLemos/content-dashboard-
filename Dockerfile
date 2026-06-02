@@ -26,13 +26,6 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 RUN mkdir -p /app/_cache && chown nextjs:nodejs /app/_cache
 
-# Metas (goals.json) ainda vivem em arquivo. Sem isto, o standalone não tem o
-# diretório data/ e a página Projetado vs Realizado estourava com ENOENT no SSR.
-# Copia as metas commitadas e garante o dir gravável pelo user nextjs.
-# Persistência entre deploys exige volume Coolify em /app/data (ver docs).
-COPY --from=builder --chown=nextjs:nodejs /app/data ./data
-RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
-
 USER nextjs
 EXPOSE 3000
 CMD ["node", "server.js"]
