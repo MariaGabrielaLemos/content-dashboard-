@@ -1,4 +1,4 @@
-import { Film, Play, Eye, Heart, MessageCircle, ExternalLink, Clock } from "lucide-react";
+import { Film, Play, Eye, Heart, MessageCircle, ExternalLink, Clock, Send } from "lucide-react";
 import Link from "next/link";
 import { format, subDays, eachDayOfInterval, isSameDay } from "date-fns";
 import { fmtBR } from "@/lib/datetime";
@@ -255,15 +255,28 @@ function ReelRow({
             </p>
           </div>
 
-          <div className="hidden grid-cols-3 gap-3 text-xs sm:grid sm:w-72 sm:shrink-0">
+          <div className="hidden grid-cols-4 gap-3 text-xs sm:grid sm:w-96 sm:shrink-0">
             <div>
-              <p className="text-muted-foreground">Views</p>
+              <p className="flex items-center gap-1 text-muted-foreground">
+                <Eye className="h-3 w-3" /> Views
+              </p>
               <p className="text-lg font-semibold tabular-nums">
                 {formatCount(reel.views ?? reel.plays ?? 0)}
               </p>
             </div>
             <div>
-              <p className="text-muted-foreground">Engajamento</p>
+              <p className="flex items-center gap-1 text-muted-foreground">
+                <Send className="h-3 w-3" /> Shares
+              </p>
+              <p className="text-lg font-semibold tabular-nums">
+                {reel.shares != null ? formatCount(reel.shares) : "—"}
+              </p>
+              <p className="text-[10px] text-muted-foreground">setinhas</p>
+            </div>
+            <div>
+              <p className="flex items-center gap-1 text-muted-foreground">
+                <Heart className="h-3 w-3" /> Engajamento
+              </p>
               <p className="text-lg font-semibold tabular-nums">
                 {formatCount(engagement)}
               </p>
@@ -272,7 +285,9 @@ function ReelRow({
               )}
             </div>
             <div>
-              <p className="text-muted-foreground">Comentários</p>
+              <p className="flex items-center gap-1 text-muted-foreground">
+                <MessageCircle className="h-3 w-3" /> Comentários
+              </p>
               <p className="text-lg font-semibold tabular-nums">
                 {formatCount(reel.comments_count)}
               </p>

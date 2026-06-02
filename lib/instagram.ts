@@ -113,7 +113,7 @@ export async function getProfile(): Promise<IGProfile | null> {
   try {
     const res = await fetch(url(SELF_PATH, {
       fields: "username,name,followers_count,media_count,profile_picture_url",
-    }), { next: { revalidate: 300 } });
+    }), { cache: "no-store" });
     if (!res.ok) {
       logApiError(endpoint, res.status, await res.json().catch(() => null));
       return null;
@@ -138,7 +138,7 @@ export async function getRecentMedia(limit = 25): Promise<IGMedia[]> {
   try {
     const res = await fetch(
       url(`${SELF_PATH}/media`, { fields, limit: String(limit) }),
-      { next: { revalidate: 300 } }
+      { cache: "no-store" }
     );
     if (!res.ok) {
       logApiError(endpoint, res.status, await res.json().catch(() => null));
@@ -190,7 +190,7 @@ export async function getAllRecentMedia(
     pages += 1;
     try {
       const res: Response = await fetch(nextUrl, {
-        next: { revalidate: 300 },
+        cache: "no-store",
       });
       if (!res.ok) {
         logApiError(
@@ -258,7 +258,7 @@ async function getMediaInsights(
   const endpoint = `/${mediaId}/insights?metric=${fields}`;
   try {
     const res = await fetch(url(`/${mediaId}/insights`, { metric: fields }), {
-      next: { revalidate: 600 },
+      cache: "no-store",
     });
     if (!res.ok) {
       logApiError(endpoint, res.status, await res.json().catch(() => null));
@@ -459,7 +459,7 @@ export async function getUserInsights(): Promise<IGUserInsights | null> {
         metric: "reach,impressions,profile_views,follower_count",
         period: "days_28",
       }),
-      { next: { revalidate: 600 } }
+      { cache: "no-store" }
     );
     if (!res.ok) {
       logApiError(endpoint, res.status, await res.json().catch(() => null));
@@ -490,5 +490,48 @@ export async function getUserInsights(): Promise<IGUserInsights | null> {
   } catch (e) {
     console.warn("[instagram] getUserInsights threw:", e);
     return null;
+  }
+}
+
+/**
+ * Série diária de NOVOS seguidores (métrica `follower_count`, period=day) dos
+ * últimos ~30 dias. Usada pra backfill aproximado dos snapshots de seguidores
+ * (reconstrói o total histórico subtraindo os novos de cada dia do total de hoje).
+ *
+ * Aproximação: `follower_count` conta novos follows, não líquido de unfollows.
+ * Aceitável pra tendência de crescimento num dashboard executivo.
+ */
+export async function getFollowerCountDaily(): Promise<
+  { date: string; value: number }[]
+> {
+  if (!isConfigured) return [];
+  const endpoint = `${SELF_PATH}/insights?metric=follower_count&period=day`;
+  try {
+    const res = await fetch(
+      url(`${SELF_PATH}/insights`, {
+        metric: "follower_count",
+        period: "day",
+      }),
+      { cache: "no-store" }
+    );
+    if (!res.ok) {
+      logApiError(endpoint, res.status, await res.json().catch(() => null));
+      return [];
+    }
+    const json = await res.json();
+    if (json.error) {
+      logApiError(endpoint, res.status, json);
+      return [];
+    }
+    const series = json.data?.[0]?.values ?? [];
+    return series
+      .map((v: { value?: number; end_time?: string }) => ({
+        date: (v.end_time ?? "").slice(0, 10),
+        value: v.value ?? 0,
+      }))
+      .filter((d: { date: string }) => d.date);
+  } catch (e) {
+    console.warn("[instagram] getFollowerCountDaily threw:", e);
+    return [];
   }
 }
