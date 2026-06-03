@@ -17,6 +17,12 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
+# Fuso de Brasília no runtime. Sem isso o container roda em UTC e o agrupamento
+# de posts por dia (isSameDay/getDate/eachDayOfInterval) joga posts publicados à
+# noite (21h-23h BRT) para o dia seguinte em UTC — criando "dias sem post"
+# falsos no gráfico e no calendário. Alpine/musl exige tzdata pro TZ valer no Date.
+ENV TZ=America/Sao_Paulo
+RUN apk add --no-cache tzdata
 
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 
