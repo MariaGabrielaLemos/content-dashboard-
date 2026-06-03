@@ -65,6 +65,10 @@ export default async function OverviewPage() {
     end: now,
   }).map((day) => {
     const dayPosts = media.filter((m) => isSameDay(new Date(m.timestamp), day));
+    // Dia sem post → lacuna (null), não zero. Mesmo tratamento da WBR.
+    if (dayPosts.length === 0) {
+      return { date: format(day, "yyyy-MM-dd"), reach: null, engagement: null };
+    }
     const reach = dayPosts.reduce((s, p) => s + (p.reach ?? 0), 0);
     const likes = dayPosts.reduce((s, p) => s + p.like_count, 0);
     const comments = dayPosts.reduce((s, p) => s + p.comments_count, 0);

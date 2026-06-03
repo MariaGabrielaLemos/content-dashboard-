@@ -12,7 +12,8 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { getRecentMedia, IGMedia } from "@/lib/instagram";
+import { getAllRecentMedia, IGMedia } from "@/lib/instagram";
+import { MonthNav } from "@/components/month-nav";
 
 const DAYS_HEADER = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 
@@ -64,13 +65,35 @@ function getDaysInMonth(year: number, month: number): number {
   return new Date(year, month + 1, 0).getDate();
 }
 
-export default async function CalendarPage() {
-  const media = await getRecentMedia(100);
-
+export default async function CalendarPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string }>;
+}) {
   const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth(); // 0-indexed
-  const today = now.getDate();
+
+  // Mês selecionado via ?month=YYYY-MM (default = mês corrente). Pedido do
+  // Fernando (02/06): poder navegar meses anteriores.
+  const params = await searchParams;
+  let currentYear = now.getFullYear();
+  let currentMonth = now.getMonth(); // 0-indexed
+  if (params.month && /^\d{4}-\d{2}$/.test(params.month)) {
+    const [y, m] = params.month.split("-").map(Number);
+    if (m >= 1 && m <= 12) {
+      currentYear = y;
+      currentMonth = m - 1;
+    }
+  }
+
+  const isCurrentMonth =
+    currentYear === now.getFullYear() && currentMonth === now.getMonth();
+  const today = isCurrentMonth ? now.getDate() : -1; // só destaca "hoje" no mês atual
+
+  // Pagina o histórico até cobrir o 1º dia do mês selecionado (com folga de
+  // alguns dias pra não perder posts de virada). Meses antigos exigem voltar
+  // mais páginas — getAllRecentMedia respeita o sinceDate.
+  const sinceDate = new Date(currentYear, currentMonth - 1, 1);
+  const media = await getAllRecentMedia({ sinceDate, maxItems: 500 });
 
   // Posts do mês atual
   const monthPosts = media.filter((m) => {
@@ -97,17 +120,20 @@ export default async function CalendarPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <div className="flex items-center gap-2">
-          <CalendarDays className="h-5 w-5 text-primary" />
-          <h1 className="text-2xl font-bold tracking-tight">Calendário de Conteúdo</h1>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <CalendarDays className="h-5 w-5 text-primary" />
+            <h1 className="text-2xl font-bold tracking-tight">Calendário de Conteúdo</h1>
+          </div>
+          <p className="text-muted-foreground mt-1">
+            Posts publicados no Instagram em {monthName} {currentYear}.
+            {monthPosts.length > 0 && (
+              <span className="ml-1">{monthPosts.length} post{monthPosts.length !== 1 ? "s" : ""} no mês.</span>
+            )}
+          </p>
         </div>
-        <p className="text-muted-foreground mt-1">
-          Posts publicados no Instagram em {monthName} {currentYear}.
-          {monthPosts.length > 0 && (
-            <span className="ml-1">{monthPosts.length} post{monthPosts.length !== 1 ? "s" : ""} este mês.</span>
-          )}
-        </p>
+        <MonthNav year={currentYear} month={currentMonth} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">

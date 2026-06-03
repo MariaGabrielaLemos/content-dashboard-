@@ -140,6 +140,12 @@ export default async function WbrPage({
     const dayPosts = allMedia.filter((m) =>
       isSameDay(new Date(m.timestamp), day)
     );
+    // Dia sem post no feed/reels → null (lacuna no gráfico), não 0. Evita
+    // ler "performance zero" onde na verdade não houve publicação. Pedido do
+    // Fernando (02/06): "tivemos dias sem post?" — o zero confundia.
+    if (dayPosts.length === 0) {
+      return { date: format(day, "yyyy-MM-dd"), reach: null, engagement: null };
+    }
     const reach = dayPosts.reduce((s, p) => s + (p.reach ?? 0), 0);
     const likes = dayPosts.reduce((s, p) => s + p.like_count, 0);
     const comments = dayPosts.reduce((s, p) => s + p.comments_count, 0);
@@ -217,7 +223,9 @@ export default async function WbrPage({
             <CardHeader>
               <CardTitle className="text-base">Evolução — últimos 30 dias</CardTitle>
               <CardDescription>
-                Alcance e engajamento agregados por dia de publicação.
+                Alcance e engajamento por dia de publicação (feed e reels). Dias sem
+                post aparecem como lacuna. Se um post viraliza, use “suavizar pico
+                viral” pra enxergar a variação dos dias normais.
               </CardDescription>
             </CardHeader>
             <CardContent>

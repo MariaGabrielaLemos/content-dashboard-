@@ -15,8 +15,9 @@ import { cn } from "@/lib/utils";
 export interface DailyMetric {
   /** YYYY-MM-DD */
   date: string;
-  reach: number;
-  engagement: number;
+  /** null = nenhum post publicado nesse dia (vira lacuna no gráfico, não um zero). */
+  reach: number | null;
+  engagement: number | null;
 }
 
 type SeriesKey = "reach" | "engagement";
@@ -45,11 +46,49 @@ export function EvolutionChart({
     reach: true,
     engagement: true,
   });
+  // Suavizar pico viral: um post de 160k de alcance achata os dias normais
+  // (300-2k) numa linha rente ao zero. Quando ligado, o(s) dia(s) de pico viram
+  // lacuna e o gráfico reescala nos dias normais — escala linear sempre (log +
+  // área de 2 eixos gera path inválido no recharts). Pedido do Fernando (02/06):
+  // o pico de 31/05 deformava o gráfico e fazia o resto do mês parecer zero.
+  const [hidePeak, setHidePeak] = useState(false);
 
   const series = SERIES.map((s) => ({
     ...s,
     label: labels?.[s.key] ?? s.label,
   }));
+
+  // Detecta picos de alcance ≥ 10x a mediana dos dias com post. Só então
+  // mostramos o toggle (pra não poluir quando não há viral).
+  const reachVals = data
+    .map((d) => d.reach)
+    .filter((v): v is number => v != null && v > 0)
+    .sort((a, b) => a - b);
+  const median = reachVals.length
+    ? reachVals[Math.floor(reachVals.length / 2)]
+    : 0;
+  const peakThreshold = median * 10;
+  const peakDays = median > 0
+    ? data.filter((d) => d.reach != null && d.reach >= peakThreshold)
+    : [];
+  const hasViralPeak = peakDays.length > 0;
+
+  // Dados exibidos: com o pico suavizado, os dias de pico viram null (lacuna),
+  // então ambos os eixos reescalam nos dias normais.
+  const peakDates = new Set(peakDays.map((d) => d.date));
+  const chartData =
+    hidePeak && hasViralPeak
+      ? data.map((d) =>
+          peakDates.has(d.date)
+            ? { ...d, reach: null, engagement: null }
+            : d
+        )
+      : data;
+
+  function fmtShortDate(iso: string): string {
+    const [, m, dd] = iso.split("-");
+    return `${dd}/${m}`;
+  }
 
   function toggle(key: SeriesKey) {
     setVisible((v) => {
@@ -88,13 +127,43 @@ export function EvolutionChart({
             </button>
           );
         })}
+        {hasViralPeak && (
+          <button
+            onClick={() => setHidePeak((v) => !v)}
+            aria-pressed={hidePeak}
+            title="Oculta o(s) dia(s) de pico viral pra enxergar a variação dos dias normais"
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-all",
+              hidePeak
+                ? "border-primary/50 bg-primary/10 text-foreground"
+                : "border-border bg-card text-muted-foreground hover:bg-muted/40"
+            )}
+          >
+            {hidePeak ? "Pico viral oculto" : "Suavizar pico viral"}
+          </button>
+        )}
         <span className="ml-auto text-[10px] text-muted-foreground/70">
           clique pra ocultar/mostrar
         </span>
       </div>
 
+      {hidePeak && hasViralPeak && (
+        <p className="text-[11px] text-muted-foreground/80">
+          Ocultado pra não distorcer a escala:{" "}
+          {peakDays
+            .map(
+              (d) =>
+                `${fmtShortDate(d.date)} (${(d.reach ?? 0).toLocaleString(
+                  "pt-BR"
+                )} de alcance)`
+            )
+            .join(", ")}
+          .
+        </p>
+      )}
+
       <ResponsiveContainer width="100%" height={260}>
-        <AreaChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+        <AreaChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id="reachFill" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.5} />
@@ -153,6 +222,7 @@ export function EvolutionChart({
               stroke="hsl(var(--chart-1))"
               strokeWidth={2}
               fill="url(#reachFill)"
+              connectNulls={false}
               isAnimationActive={false}
             />
           )}
@@ -164,6 +234,7 @@ export function EvolutionChart({
               stroke="hsl(var(--chart-4))"
               strokeWidth={2}
               fill="url(#engagementFill)"
+              connectNulls={false}
               isAnimationActive={false}
             />
           )}
